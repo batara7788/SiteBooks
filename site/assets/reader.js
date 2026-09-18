@@ -25,6 +25,10 @@ const BOX_LABELS = {
   "how-discovered": "А как к этому пришли?",
   "timeline": "Мини-таймлайн",
   "philosopher-life": "Жизнь философа",
+  "scheme": "Схема",
+  "figures": "Цифры",
+  "hypothesis": "Гипотеза",
+  "in-your-life": "В вашей жизни",
 };
 
 const state = {
@@ -35,7 +39,37 @@ const state = {
   partCache: new Map(),
   scrollObserver: null,   // отслеживает, какая глава сейчас в поле зрения (для закладки/оглавления)
   loadObserver: null,     // ловит момент, когда пора подгрузить следующую часть
+  currentChapter: null,   // {chapterId, chapterTitle, partTitle} — куда привязывается новая заметка
 };
+
+const NOTES_PREFIX = "notes:";
+
+function getNotes(bookId) {
+  try {
+    const raw = localStorage.getItem(NOTES_PREFIX + bookId);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveNotes(bookId, notes) {
+  try {
+    localStorage.setItem(NOTES_PREFIX + bookId, JSON.stringify(notes));
+  } catch {
+    // localStorage недоступен — заметка просто не сохранится в этой сессии.
+  }
+}
+
+function addNote(bookId, note) {
+  const notes = getNotes(bookId);
+  notes.push(note);
+  saveNotes(bookId, notes);
+}
+
+function deleteNote(bookId, noteId) {
+  saveNotes(bookId, getNotes(bookId).filter((n) => n.id !== noteId));
+}
 
 function loadSettings() {
   try {
@@ -119,7 +153,7 @@ function renderBlock(block) {
       div.className = `box kind-${block.kind}`;
       const label = document.createElement("span");
       label.className = "box-label";
-      label.textContent = BOX_LABELS[block.kind] || block.kind;
+      label.textContent = block.label || BOX_LABELS[block.kind] || block.kind;
       div.appendChild(label);
       block.html.forEach((paraHtml) => {
         const p = document.createElement("p");
@@ -225,6 +259,66 @@ function currentChapterId() {
   return new URLSearchParams(location.search).get("ch");
 }
 
+function renderNotes() {
+  const list = document.getElementById("notes-list");
+  if (!list) return;
+  list.innerHTML = "";
+  const notes = getNotes(state.bookId).slice().reverse();
+  if (notes.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "notes-empty";
+    empty.textContent = "Заметок пока нет.";
+    list.appendChild(empty);
+    return;
+  }
+  notes.forEach((note) => {
+    const item = document.createElement("div");
+    item.className = "note-item";
+
+    const link = document.createElement("a");
+    link.href = `read.html?book=${state.bookId}&ch=${note.chapterId}`;
+    link.className = "note-chapter";
+    link.textContent = note.chapterTitle;
+    item.appendChild(link);
+
+    const text = document.createElement("p");
+    text.className = "note-text";
+    text.textContent = note.text;
+    item.appendChild(text);
+
+    const del = document.createElement("button");
+    del.className = "note-delete";
+    del.textContent = "Удалить";
+    del.addEventListener("click", () => {
+      deleteNote(state.bookId, note.id);
+      renderNotes();
+    });
+    item.appendChild(del);
+
+    list.appendChild(item);
+  });
+}
+
+function setupNotes() {
+  const saveBtn = document.getElementById("save-note");
+  const input = document.getElementById("note-input");
+  if (!saveBtn) return;
+  saveBtn.addEventListener("click", () => {
+    const text = input.value.trim();
+    if (!text || !state.currentChapter) return;
+    addNote(state.bookId, {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      chapterId: state.currentChapter.chapterId,
+      chapterTitle: state.currentChapter.chapterTitle,
+      partTitle: state.currentChapter.partTitle,
+      text,
+      createdAt: Date.now(),
+    });
+    input.value = "";
+    renderNotes();
+  });
+}
+
 function updateProgressBar() {
   const bar = document.getElementById("progress-bar");
   const doc = document.documentElement;
@@ -263,8 +357,10 @@ async function renderChapterMode(chapterId) {
   document.getElementById("book-title").textContent = state.meta.title;
   document.title = `${chapter.title} — ${state.meta.title}`;
   setBookmark(state.bookId, entry.partId, chapterId);
+  state.currentChapter = { chapterId, chapterTitle: chapter.title, partTitle: entry.partTitle };
   window.scrollTo(0, 0);
   renderTOC();
+  renderNotes();
 }
 
 function navLink(entry, label) {
@@ -323,7 +419,10 @@ async function renderPartMode(chapterId) {
       history.replaceState(null, "", url);
       const chapterTitle = section.querySelector("h2")?.textContent || "";
       document.title = `${chapterTitle} — ${state.meta.title}`;
+      const partTitle = state.meta.parts.find((p) => p.id === pid)?.title || "";
+      state.currentChapter = { chapterId: cid, chapterTitle, partTitle };
       renderTOC();
+      renderNotes();
     },
     { rootMargin: "-20% 0px -70% 0px" }
   );
@@ -353,7 +452,9 @@ async function renderPartMode(chapterId) {
   document.getElementById("book-title").textContent = state.meta.title;
   document.title = `${entry.chapterTitle} — ${state.meta.title}`;
   setBookmark(state.bookId, entry.partId, chapterId);
+  state.currentChapter = { chapterId, chapterTitle: entry.chapterTitle, partTitle: entry.partTitle };
   renderTOC();
+  renderNotes();
 }
 
 async function renderCurrentChapter() {
@@ -368,20 +469,37 @@ async function renderCurrentChapter() {
 
 function setupPanels() {
   const tocPanel = document.getElementById("toc-panel");
+  const notesPanel = document.getElementById("notes-panel");
   const settingsPanel = document.getElementById("settings-panel");
   const overlay = document.getElementById("panel-overlay");
+  const menuDropdown = document.getElementById("menu-dropdown");
 
   function closeAll() {
     tocPanel.classList.remove("open");
+    notesPanel.classList.remove("open");
     settingsPanel.classList.remove("open");
     overlay.classList.remove("open");
+    menuDropdown.classList.remove("open");
   }
 
+  document.getElementById("open-menu").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menuDropdown.classList.toggle("open");
+  });
+  document.addEventListener("click", () => menuDropdown.classList.remove("open"));
+
   document.getElementById("open-toc").addEventListener("click", () => {
+    menuDropdown.classList.remove("open");
     tocPanel.classList.add("open");
     overlay.classList.add("open");
   });
+  document.getElementById("open-notes").addEventListener("click", () => {
+    menuDropdown.classList.remove("open");
+    notesPanel.classList.add("open");
+    overlay.classList.add("open");
+  });
   document.getElementById("open-settings").addEventListener("click", () => {
+    menuDropdown.classList.remove("open");
     settingsPanel.classList.add("open");
     overlay.classList.add("open");
   });
@@ -396,6 +514,30 @@ function setupPanels() {
       if (setting === "mode") renderCurrentChapter();
     });
   });
+
+  setupNotes();
+}
+
+// Скроллишь вниз — прячем шапку (больше места под текст на телефоне),
+// вверх — тут же возвращаем. Порог в 10px гасит дрожание от инерционного
+// скролла на iOS, которое иначе то показывает, то прячет шапку рывками.
+function setupAutoHideTopbar() {
+  const topbar = document.getElementById("reader-topbar");
+  let lastY = window.scrollY;
+  window.addEventListener(
+    "scroll",
+    () => {
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) < 10) return;
+      if (y > lastY && y > topbar.offsetHeight) {
+        topbar.classList.add("hide");
+      } else {
+        topbar.classList.remove("hide");
+      }
+      lastY = y;
+    },
+    { passive: true }
+  );
 }
 
 async function initReader() {
@@ -408,6 +550,7 @@ async function initReader() {
 
   applySettings();
   setupPanels();
+  setupAutoHideTopbar();
   window.addEventListener("scroll", updateProgressBar, { passive: true });
 
   const res = await fetch(`data/${state.bookId}/meta.json`);

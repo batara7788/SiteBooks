@@ -9,11 +9,24 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="shelf-page" data-font="slab" data-size="2" data-leading="normal">
-  <header class="shelf-header">
-    <h1>Книги</h1>
-    <p>Читайте прямо здесь — ничего скачивать не нужно.</p>
-  </header>
-  <main class="shelf-grid" id="shelf-grid"></main>
+  <div class="shelf-layout">
+    <div class="shelf-main">
+      <header class="shelf-header">
+        <h1>Книги</h1>
+        <p>Читайте прямо здесь — ничего скачивать не нужно.</p>
+      </header>
+      <main class="shelf-grid" id="shelf-grid"></main>
+    </div>
+
+    <aside class="panel right shelf-notes" id="shelf-notes-panel">
+      <h3>Заметки</h3>
+      <div id="shelf-notes-list"></div>
+    </aside>
+  </div>
+
+  <button id="shelf-notes-toggle" class="shelf-notes-toggle">☰ Заметки</button>
+  <div class="panel-overlay" id="shelf-panel-overlay"></div>
+
   <script>
     // Тема применяется до отрисовки полки, чтобы не было мигания светлым фоном.
     try {

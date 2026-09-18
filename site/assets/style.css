@@ -119,7 +119,50 @@ button:hover { background: var(--bg-elevated); }
   .shelf-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* ---------- Заметки на полке ---------- */
+/* На широком экране — колонка справа. На узком — та же панель, что и в
+   читалке (.panel), выезжает по кнопке снизу справа. */
+.shelf-layout {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+.shelf-notes-toggle {
+  position: fixed;
+  bottom: 1.1rem;
+  right: 1.1rem;
+  z-index: 12;
+  border-radius: 999px;
+  padding: 0.6rem 1.1rem;
+  background: var(--bg-elevated);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+@media (min-width: 900px) {
+  .shelf-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1.5rem;
+    align-items: start;
+    padding: 0 1.25rem;
+  }
+  .shelf-layout .shelf-header,
+  .shelf-layout .shelf-grid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .shelf-notes {
+    position: static;
+    transform: none !important;
+    width: auto;
+    border: none;
+    box-shadow: none;
+    padding: 2.5rem 0 0;
+    background: transparent;
+  }
+  .shelf-notes-toggle { display: none; }
+}
+
 .book-card {
+  position: relative;
   display: block;
   text-decoration: none;
   color: inherit;
@@ -128,6 +171,16 @@ button:hover { background: var(--bg-elevated); }
   padding: 1.25rem;
   background: var(--bg-elevated);
 }
+.progress-ring {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+}
+.progress-ring-track { stroke: var(--border); }
+.progress-ring-value { stroke: var(--accent); transition: stroke-dashoffset 0.4s ease; }
+.progress-ring-text { font-size: 0.5rem; fill: var(--text-dim); font-family: var(--font-sans); }
 .book-card h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
 .book-card p.subtitle { margin: 0 0 0.75rem; color: var(--text-dim); font-size: 0.95rem; }
 .book-card .stats { font-size: 0.8rem; color: var(--text-dim); }
@@ -149,9 +202,49 @@ button:hover { background: var(--bg-elevated); }
   padding: 0.6rem 1rem;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  transform: translateY(0);
+  transition: transform 0.25s ease;
 }
+/* Скроллишь вниз — шапка уезжает, чтобы не занимать место на телефоне;
+   вверх — тут же плавно возвращается (см. .js: определяет направление
+   скролла и переключает этот класс). */
+.reader-topbar.hide { transform: translateY(-100%); }
+
 .reader-topbar .spacer { flex: 1; }
 .reader-topbar .book-title { font-size: 0.9rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Гамбургер-меню (Оглавление / Заметки / Настройки) ---------- */
+.menu-wrap { position: relative; }
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 15;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.menu-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.menu-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+[data-theme="royal"] .menu-dropdown { border-color: var(--accent); }
 
 .progress-bar {
   position: fixed;
@@ -289,6 +382,30 @@ figcaption { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.4em; }
 }
 .toc-chapter.current { color: var(--accent); font-weight: 600; }
 
+.notes-empty { color: var(--text-dim); font-size: 0.9rem; }
+.note-item {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 0;
+}
+.note-item:first-child { border-top: none; }
+.note-chapter {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  margin-bottom: 0.3rem;
+}
+.note-text {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+.note-delete {
+  font-size: 0.75rem;
+  padding: 0.2em 0.6em;
+  color: var(--text-dim);
+}
+
 .setting-group { margin-bottom: 1.25rem; }
 .setting-group .label { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.4rem; }
 .setting-options { display: flex; gap: 0.4rem; flex-wrap: wrap; }
@@ -341,4 +458,26 @@ body.shelf-page[data-theme="royal"] .book-card {
 }
 body.shelf-page[data-theme="royal"] .book-card:hover {
   border-color: var(--accent);
+}
+
+/* На телефоне 132px-уголки перекрывают заголовок и карточки (упирались в
+   контент при узком экране) — уменьшаем и освобождаем им место отступами. */
+@media (max-width: 480px) {
+  body.shelf-page[data-theme="royal"]::before,
+  body.shelf-page[data-theme="royal"]::after,
+  body.shelf-page[data-theme="royal"] .shelf-header::before,
+  body.shelf-page[data-theme="royal"] .shelf-header::after {
+    width: 64px;
+    height: 64px;
+  }
+  body.shelf-page[data-theme="royal"] .shelf-header {
+    padding-top: 3.5rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  body.shelf-page[data-theme="royal"] .shelf-grid {
+    padding-bottom: 4rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
 }

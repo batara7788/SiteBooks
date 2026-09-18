@@ -11,12 +11,18 @@
 <body>
   <div class="progress-bar" id="progress-bar"></div>
 
-  <div class="reader-topbar">
+  <div class="reader-topbar" id="reader-topbar">
     <a href="index.html">← полка</a>
     <span class="book-title" id="book-title"></span>
     <span class="spacer"></span>
-    <button id="open-toc">Оглавление</button>
-    <button id="open-settings">Настройки</button>
+    <div class="menu-wrap">
+      <button id="open-menu">☰ Меню</button>
+      <div class="menu-dropdown" id="menu-dropdown">
+        <button id="open-toc">Оглавление</button>
+        <button id="open-notes">Заметки</button>
+        <button id="open-settings">Настройки</button>
+      </div>
+    </div>
   </div>
 
   <main class="reader-body" id="reader-content"></main>
@@ -26,6 +32,15 @@
   <aside class="panel left" id="toc-panel">
     <h3>Оглавление</h3>
     <div id="toc-content"></div>
+  </aside>
+
+  <aside class="panel right" id="notes-panel">
+    <h3>Заметки</h3>
+    <div class="setting-group">
+      <textarea id="note-input" rows="3" placeholder="Заметка к текущей главе…" style="width:100%; font: inherit; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); resize: vertical;"></textarea>
+      <button id="save-note" style="margin-top: 0.5rem;">Сохранить заметку</button>
+    </div>
+    <div id="notes-list"></div>
   </aside>
 
   <aside class="panel right" id="settings-panel">

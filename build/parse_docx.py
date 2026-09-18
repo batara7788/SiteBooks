@@ -25,23 +25,39 @@ R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 WP = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"
 
-# Цвет заливки врезки -> тип. Взято из «Философии» (см. CLAUDE.md §5).
-# Если в новой книге появится другой цвет — его надо дописать сюда,
-# иначе врезка станет обычным абзацем без полосы и подписи.
-FILL_KINDS = {
-    "EAF2FB": "two-words",
-    "EAF6EC": "chapter-gist",
-    "EEF8F0": "interesting",
-    "F4EEFA": "original-term",
-    "FDEDEC": "misconception",
-    "FFF0E6": "debate",
-    "FEF6E4": "thought-experiment",
-    "F0F4F8": "formula",
-    "F2F2F2": "quote",
-    "E8F6F6": "how-discovered",
-    "EEF1F8": "timeline",
-    "F3EFE9": "philosopher-life",
-}
+# Текст подписи врезки -> тип. Раньше тип определялся по цвету заливки, но
+# на «Как работает всё» и «Космосе» один и тот же цвет переиспользуется для
+# разных подписей (а иногда наоборот — цвета вообще не участвуют, врезка
+# сделана однострочной таблицей). Подпись — единственное, на что можно
+# положиться во всех трёх книгах. Проверка по startswith, не ==, потому что
+# подписи бывают с хвостом («▢ СХЕМА 1.1: …», «СПОРНЫЙ ВОПРОС, ТОЧНЕЕ — …»).
+LABEL_KIND_RULES = [
+    ("В ДВУХ СЛОВАХ", "two-words"),
+    ("ГЛАВНОЕ ИЗ ГЛАВЫ", "chapter-gist"),
+    ("ЭТО ИНТЕРЕСНО", "interesting"),
+    ("СЛОВО В ОРИГИНАЛЕ", "original-term"),
+    ("РАСПРОСТРАНЁННОЕ ЗАБЛУЖДЕНИЕ", "misconception"),
+    ("СПОРНЫЙ ВОПРОС", "debate"),
+    ("МЫСЛЕННЫЙ ЭКСПЕРИМЕНТ", "thought-experiment"),
+    ("ФОРМУЛА", "formula"),
+    ("ЦИТАТА", "quote"),
+    ("А КАК К ЭТОМУ ПРИШЛИ", "how-discovered"),
+    ("А КАК ЭТО УЗНАЛИ", "how-discovered"),
+    ("МИНИ-ТАЙМЛАЙН", "timeline"),
+    ("ЖИЗНЬ ФИЛОСОФА", "philosopher-life"),
+    ("СХЕМА", "scheme"),
+    ("ЦИФРЫ", "figures"),
+    ("ГИПОТЕЗА", "hypothesis"),
+    ("В ВАШЕЙ ЖИЗНИ", "in-your-life"),
+]
+
+
+def label_to_kind(label):
+    norm = re.sub(r"^[^\wА-ЯЁа-яё]+", "", label.upper()).strip()
+    for prefix, kind in LABEL_KIND_RULES:
+        if norm.startswith(prefix):
+            return kind
+    return slugify(label, "box") or "box"
 
 HEADING_STYLES = {"Heading1": "part", "Heading2": "chapter", "Heading3": "heading3"}
 
@@ -115,6 +131,10 @@ def paragraph_image_rid(p):
     return blip.get(f"{R}embed")
 
 
+def _block_is_trivial(block):
+    return block.get("type") == "p" and not block.get("html", "").strip()
+
+
 class Book:
     def __init__(self, book_id, title, subtitle):
         self.id = book_id
@@ -148,7 +168,19 @@ class Book:
 
     def add_block(self, block):
         if self._cur_chapter is None:
-            self.add_chapter("Без названия")
+            # Контент между заголовком части и первой главой (обычно —
+            # пустой абзац-разделитель). Своей главы у него нет и быть не
+            # должно — раньше это превращалось в фиктивную "Без названия".
+            # Если тут что-то весомее пустой строки — не теряем молча,
+            # а сигналим в stderr, чтобы проверить руками (см. CLAUDE.md §9.6).
+            preview = json.dumps(block, ensure_ascii=False)[:200]
+            if not _block_is_trivial(block):
+                print(
+                    f"ВНИМАНИЕ: контент перед первой главой части «{self._cur_part}» "
+                    f"отброшен: {preview}",
+                    file=sys.stderr,
+                )
+            return
         chapters = self.part_files[self._cur_part]["chapters"]
         chapters[-1]["blocks"].append(block)
         if block["type"] == "box":
@@ -186,14 +218,24 @@ def convert(docx_path, out_dir, book_id, title, subtitle):
             book.add_block({"type": "list", "items": list(list_buffer)})
             list_buffer.clear()
 
+    def make_box_block(paragraphs):
+        # Первый абзац врезки — подпись капсом (берём её текст как есть:
+        # разные книги по-разному формулируют один и тот же тип врезки,
+        # например «А как это узнали?» вместо «А как к этому пришли?»).
+        label = re.sub(r"</?[bis]>", "", paragraphs[0]).strip() if paragraphs else ""
+        body_paragraphs = paragraphs[1:] if len(paragraphs) > 1 else paragraphs
+        return {
+            "type": "box",
+            "kind": label_to_kind(label),
+            "label": label,
+            "html": [h for h in body_paragraphs if h],
+        }
+
     def flush_box():
         nonlocal box_fill
         if not box_buffer:
             return
-        kind = FILL_KINDS.get(box_fill, box_fill or "unknown")
-        # Первый абзац врезки — подпись капсом, дальше идёт содержимое.
-        body_paragraphs = box_buffer[1:] if len(box_buffer) > 1 else box_buffer
-        book.add_block({"type": "box", "kind": kind, "html": [h for h in body_paragraphs if h]})
+        book.add_block(make_box_block(list(box_buffer)))
         box_buffer.clear()
         box_fill = None
 
@@ -211,8 +253,24 @@ def convert(docx_path, out_dir, book_id, title, subtitle):
         if tag == f"{W}tbl":
             flush_list()
             flush_box()
+
+            trs = el.findall(f"{W}tr")
+            tcs = trs[0].findall(f"{W}tc") if len(trs) == 1 else []
+            if len(trs) == 1 and len(tcs) == 1:
+                # Однострочная таблица на одну ячейку — это не таблица данных,
+                # а врезка, оформленная через таблицу вместо заливки абзаца
+                # (см. «Как работает всё»: первый абзац ячейки — подпись
+                # капсом, остальные — текст врезки, структура один в один
+                # как у обычной врезки-абзаца).
+                cell_paragraphs = [
+                    h for p in tcs[0].findall(f"{W}p") if (h := paragraph_html(p))
+                ]
+                if cell_paragraphs:
+                    book.add_block(make_box_block(cell_paragraphs))
+                continue
+
             rows = []
-            for tr in el.findall(f"{W}tr"):
+            for tr in trs:
                 row = []
                 for tc in tr.findall(f"{W}tc"):
                     cell_html = " ".join(
@@ -278,6 +336,16 @@ def convert(docx_path, out_dir, book_id, title, subtitle):
     flush_list()
     flush_box()
 
+    # Часть без единой главы — мусор (например, "Содержание" в некоторых
+    # книгах тоже оформлено Заголовком 1 и ловится тем же эвристическим
+    # правилом, что и настоящие части). Реальному оглавлению сайта такая
+    # часть только мешает.
+    empty_part_ids = {p["id"] for p in book.parts if not p["chapters"]}
+    if empty_part_ids:
+        book.parts = [p for p in book.parts if p["id"] not in empty_part_ids]
+        for pid in empty_part_ids:
+            del book.part_files[pid]
+
     # --- запись на диск ---
     book_dir = out_dir / book_id
     media_dir = book_dir / "media"
@@ -313,9 +381,15 @@ def convert(docx_path, out_dir, book_id, title, subtitle):
     print(f"Изображений: {book._image_count}")
     print(f"Врезок по типам: {book._box_count}")
     print(f"Врезок всего: {sum(book._box_count.values())}")
-    unknown = {k: v for k, v in book._box_count.items() if k not in FILL_KINDS.values()}
-    if unknown:
-        print(f"ВНИМАНИЕ: неизвестные цвета врезок, допиши в FILL_KINDS: {unknown}", file=sys.stderr)
+    known_kinds = {kind for _, kind in LABEL_KIND_RULES}
+    unrecognized = {k: v for k, v in book._box_count.items() if k not in known_kinds}
+    if unrecognized:
+        print(
+            f"ВНИМАНИЕ: подписи врезок не распознаны ни одним правилом из "
+            f"LABEL_KIND_RULES, тип определён автоматически по тексту подписи "
+            f"(проверь, не однотипные ли это врезки под разными формулировками): {unrecognized}",
+            file=sys.stderr,
+        )
 
 
 def main():
