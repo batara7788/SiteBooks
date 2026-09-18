@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&family=Roboto+Slab:wght@400;500;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 </head>
-<body class="shelf-page" data-font="slab" data-size="2" data-leading="normal">
+<body class="shelf-page">
   <div class="shelf-layout">
     <div class="shelf-main">
       <header class="shelf-header">
@@ -24,15 +24,77 @@
     </aside>
   </div>
 
-  <button id="shelf-notes-toggle" class="shelf-notes-toggle">☰ Заметки</button>
+  <div class="menu-wrap shelf-menu-wrap">
+    <button id="shelf-open-menu">☰ Меню</button>
+    <div class="menu-dropdown" id="shelf-menu-dropdown">
+      <button id="shelf-open-notes">Заметки</button>
+      <button id="shelf-open-settings">Настройки</button>
+    </div>
+  </div>
+
   <div class="panel-overlay" id="shelf-panel-overlay"></div>
 
+  <aside class="panel right" id="shelf-settings-panel">
+    <h3>Настройки чтения</h3>
+
+    <div class="setting-group">
+      <div class="label">Тема</div>
+      <div class="setting-options">
+        <button data-setting="theme" data-value="light">Светлая</button>
+        <button data-setting="theme" data-value="dark">Тёмная</button>
+        <button data-setting="theme" data-value="royal">Королевская</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Ширина колонки</div>
+      <div class="setting-options">
+        <button data-setting="width" data-value="normal">Обычная</button>
+        <button data-setting="width" data-value="wide">Широкая</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Шрифт</div>
+      <div class="setting-options">
+        <button data-setting="font" data-value="serif">Serif</button>
+        <button data-setting="font" data-value="slab">Slab</button>
+        <button data-setting="font" data-value="sans">Sans</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Размер</div>
+      <div class="setting-options">
+        <button data-setting="size" data-value="1">A</button>
+        <button data-setting="size" data-value="2">A</button>
+        <button data-setting="size" data-value="3">A</button>
+        <button data-setting="size" data-value="4">A</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Межстрочный интервал</div>
+      <div class="setting-options">
+        <button data-setting="leading" data-value="tight">Плотный</button>
+        <button data-setting="leading" data-value="normal">Обычный</button>
+        <button data-setting="leading" data-value="loose">Свободный</button>
+      </div>
+    </div>
+  </aside>
+
   <script>
-    // Тема применяется до отрисовки полки, чтобы не было мигания светлым фоном.
+    // Настройки применяются до отрисовки полки, чтобы не мигало дефолтной
+    // темой/шрифтом. Тот же ключ localStorage, что и в читалке (§7) — одни
+    // и те же настройки действуют на обеих страницах.
     try {
       const raw = localStorage.getItem("reader-settings");
-      const theme = raw ? JSON.parse(raw).theme : null;
-      if (theme) document.body.dataset.theme = theme;
+      const s = raw ? JSON.parse(raw) : {};
+      document.body.dataset.theme = s.theme || "light";
+      document.body.dataset.font = s.font || "slab";
+      document.body.dataset.size = s.size || "2";
+      document.body.dataset.leading = s.leading || "normal";
+      document.body.dataset.width = s.width || "normal";
     } catch {}
   </script>
   <script src="assets/shelf.js"></script>

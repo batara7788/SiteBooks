@@ -54,19 +54,24 @@ async function loadBookCard(id) {
       a.appendChild(stats);
     }
 
+    // Подвал — всегда, даже пустой: иначе карточки без закладки были бы
+    // короче остальных (см. просьбу сделать все карточки одной высоты).
+    const footer = document.createElement("div");
+    footer.className = "card-footer";
+    a.appendChild(footer);
+
     const bookmark = getBookmark(id);
     if (bookmark) {
-      const totalChapters = meta.parts.reduce((n, p) => n + p.chapters.length, 0);
-      const chapterNum = parseInt((JSON.parse(bookmark).chapterId || "").replace("ch-", ""), 10);
-      if (totalChapters && !Number.isNaN(chapterNum)) {
-        a.appendChild(progressRing(chapterNum / totalChapters));
-      }
-
       const cont = document.createElement("span");
       cont.className = "continue";
       cont.textContent = "продолжить чтение →";
-      a.appendChild(document.createElement("br"));
-      a.appendChild(cont);
+      footer.appendChild(cont);
+
+      const totalChapters = meta.parts.reduce((n, p) => n + p.chapters.length, 0);
+      const chapterNum = parseInt((JSON.parse(bookmark).chapterId || "").replace("ch-", ""), 10);
+      if (totalChapters && !Number.isNaN(chapterNum)) {
+        footer.appendChild(progressRing(chapterNum / totalChapters));
+      }
     }
 
     return a;
@@ -155,21 +160,81 @@ function renderShelfNotes() {
   });
 }
 
-function setupShelfNotesPanel() {
-  const panel = document.getElementById("shelf-notes-panel");
-  const overlay = document.getElementById("shelf-panel-overlay");
-  const toggle = document.getElementById("shelf-notes-toggle");
-  if (!panel || !toggle) return;
+// Настройки — тот же ключ localStorage, что и в читалке (§7), поэтому смена
+// темы/шрифта здесь тут же видна и при следующем открытии книги.
+const SETTINGS_KEY = "reader-settings";
 
-  toggle.addEventListener("click", () => {
-    panel.classList.add("open");
-    overlay.classList.add("open");
-  });
-  overlay.addEventListener("click", () => {
-    panel.classList.remove("open");
-    overlay.classList.remove("open");
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // localStorage недоступен — настройка не сохранится в этой сессии.
+  }
+}
+
+function applySettings(settings) {
+  const body = document.body;
+  body.dataset.theme = settings.theme || "light";
+  body.dataset.font = settings.font || "slab";
+  body.dataset.size = settings.size || "2";
+  body.dataset.leading = settings.leading || "normal";
+  body.dataset.width = settings.width || "normal";
+  document.querySelectorAll("[data-setting]").forEach((btn) => {
+    const { setting, value } = btn.dataset;
+    btn.classList.toggle("active", settings[setting] === value);
   });
 }
 
-setupShelfNotesPanel();
+function setupMenuAndPanels() {
+  const notesPanel = document.getElementById("shelf-notes-panel");
+  const settingsPanel = document.getElementById("shelf-settings-panel");
+  const overlay = document.getElementById("shelf-panel-overlay");
+  const menuDropdown = document.getElementById("shelf-menu-dropdown");
+
+  function closeAll() {
+    notesPanel.classList.remove("open");
+    settingsPanel.classList.remove("open");
+    overlay.classList.remove("open");
+    menuDropdown.classList.remove("open");
+  }
+
+  document.getElementById("shelf-open-menu").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menuDropdown.classList.toggle("open");
+  });
+  document.addEventListener("click", () => menuDropdown.classList.remove("open"));
+
+  document.getElementById("shelf-open-notes").addEventListener("click", () => {
+    menuDropdown.classList.remove("open");
+    notesPanel.classList.add("open");
+    overlay.classList.add("open");
+  });
+  document.getElementById("shelf-open-settings").addEventListener("click", () => {
+    menuDropdown.classList.remove("open");
+    settingsPanel.classList.add("open");
+    overlay.classList.add("open");
+  });
+  overlay.addEventListener("click", closeAll);
+
+  applySettings(loadSettings());
+  document.querySelectorAll("[data-setting]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const settings = loadSettings();
+      settings[btn.dataset.setting] = btn.dataset.value;
+      saveSettings(settings);
+      applySettings(settings);
+    });
+  });
+}
+
+setupMenuAndPanels();
 loadShelf();
