@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   size: "2",
   leading: "normal",
   mode: "chapter", // "chapter" — по главам, "part" — часть целиком
+  width: "normal", // "normal" — узкая колонка, "wide" — для больших мониторов
 };
 
 const BOX_LABELS = {
@@ -59,6 +60,7 @@ function applySettings() {
   body.dataset.font = state.settings.font;
   body.dataset.size = state.settings.size;
   body.dataset.leading = state.settings.leading;
+  body.dataset.width = state.settings.width;
   document.querySelectorAll("[data-setting]").forEach((btn) => {
     const [group, value] = [btn.dataset.setting, btn.dataset.value];
     btn.classList.toggle("active", state.settings[group] === value);
@@ -370,18 +372,18 @@ function setupPanels() {
   const overlay = document.getElementById("panel-overlay");
 
   function closeAll() {
-    tocPanel.hidden = true;
-    settingsPanel.hidden = true;
-    overlay.hidden = true;
+    tocPanel.classList.remove("open");
+    settingsPanel.classList.remove("open");
+    overlay.classList.remove("open");
   }
 
   document.getElementById("open-toc").addEventListener("click", () => {
-    tocPanel.hidden = false;
-    overlay.hidden = false;
+    tocPanel.classList.add("open");
+    overlay.classList.add("open");
   });
   document.getElementById("open-settings").addEventListener("click", () => {
-    settingsPanel.hidden = false;
-    overlay.hidden = false;
+    settingsPanel.classList.add("open");
+    overlay.classList.add("open");
   });
   overlay.addEventListener("click", closeAll);
 

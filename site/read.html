@@ -21,14 +21,14 @@
 
   <main class="reader-body" id="reader-content"></main>
 
-  <div class="panel-overlay" id="panel-overlay" hidden></div>
+  <div class="panel-overlay" id="panel-overlay"></div>
 
-  <aside class="panel left" id="toc-panel" hidden>
+  <aside class="panel left" id="toc-panel">
     <h3>Оглавление</h3>
     <div id="toc-content"></div>
   </aside>
 
-  <aside class="panel right" id="settings-panel" hidden>
+  <aside class="panel right" id="settings-panel">
     <h3>Настройки чтения</h3>
 
     <div class="setting-group">
@@ -36,6 +36,15 @@
       <div class="setting-options">
         <button data-setting="theme" data-value="light">Светлая</button>
         <button data-setting="theme" data-value="dark">Тёмная</button>
+        <button data-setting="theme" data-value="royal">Королевская</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Ширина колонки</div>
+      <div class="setting-options">
+        <button data-setting="width" data-value="normal">Обычная</button>
+        <button data-setting="width" data-value="wide">Широкая</button>
       </div>
     </div>
 
