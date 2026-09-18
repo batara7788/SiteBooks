@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Читалка</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&family=Roboto+Slab:wght@400;500;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progress-bar"></div>
+
+  <div class="reader-topbar">
+    <a href="index.html">← полка</a>
+    <span class="book-title" id="book-title"></span>
+    <span class="spacer"></span>
+    <button id="open-toc">Оглавление</button>
+    <button id="open-settings">Настройки</button>
+  </div>
+
+  <main class="reader-body" id="reader-content"></main>
+
+  <div class="panel-overlay" id="panel-overlay" hidden></div>
+
+  <aside class="panel left" id="toc-panel" hidden>
+    <h3>Оглавление</h3>
+    <div id="toc-content"></div>
+  </aside>
+
+  <aside class="panel right" id="settings-panel" hidden>
+    <h3>Настройки чтения</h3>
+
+    <div class="setting-group">
+      <div class="label">Тема</div>
+      <div class="setting-options">
+        <button data-setting="theme" data-value="light">Светлая</button>
+        <button data-setting="theme" data-value="dark">Тёмная</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Шрифт</div>
+      <div class="setting-options">
+        <button data-setting="font" data-value="serif">Serif</button>
+        <button data-setting="font" data-value="slab">Slab</button>
+        <button data-setting="font" data-value="sans">Sans</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Размер</div>
+      <div class="setting-options">
+        <button data-setting="size" data-value="1">A</button>
+        <button data-setting="size" data-value="2">A</button>
+        <button data-setting="size" data-value="3">A</button>
+        <button data-setting="size" data-value="4">A</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Межстрочный интервал</div>
+      <div class="setting-options">
+        <button data-setting="leading" data-value="tight">Плотный</button>
+        <button data-setting="leading" data-value="normal">Обычный</button>
+        <button data-setting="leading" data-value="loose">Свободный</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="label">Режим чтения</div>
+      <div class="setting-options">
+        <button data-setting="mode" data-value="chapter">По главам</button>
+        <button data-setting="mode" data-value="part">Часть целиком</button>
+      </div>
+    </div>
+  </aside>
+
+  <script src="assets/reader.js"></script>
+</body>
+</html>
