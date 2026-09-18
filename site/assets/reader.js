@@ -32,6 +32,8 @@ const state = {
   settings: loadSettings(),
   chapterIndex: [], // [{ chapterId, partId, partTitle, chapterTitle }]
   partCache: new Map(),
+  scrollObserver: null,   // отслеживает, какая глава сейчас в поле зрения (для закладки/оглавления)
+  loadObserver: null,     // ловит момент, когда пора подгрузить следующую часть
 };
 
 function loadSettings() {
@@ -166,6 +168,16 @@ function renderChapter(container, chapter, partTitle) {
   chapter.blocks.forEach((block) => container.appendChild(renderBlock(block)));
 }
 
+// Каждая глава в режиме "часть целиком" — отдельная <section> с data-атрибутами,
+// чтобы scroll-spy (IntersectionObserver) мог понять, какая глава сейчас читается.
+function renderChapterSection(chapter, partId) {
+  const section = document.createElement("section");
+  section.dataset.chapterId = chapter.id;
+  section.dataset.partId = partId;
+  renderChapter(section, chapter, partId);
+  return section;
+}
+
 function buildChapterIndex(meta) {
   const index = [];
   meta.parts.forEach((part) => {
@@ -221,6 +233,9 @@ function updateProgressBar() {
 }
 
 async function renderChapterMode(chapterId) {
+  if (state.scrollObserver) state.scrollObserver.disconnect();
+  if (state.loadObserver) state.loadObserver.disconnect();
+
   const entry = findChapter(chapterId);
   if (!entry) {
     document.getElementById("reader-content").textContent = "Глава не найдена.";
@@ -261,22 +276,80 @@ function navLink(entry, label) {
   return a;
 }
 
-async function renderPartMode(chapterId) {
-  const entry = findChapter(chapterId);
-  if (!entry) return;
-  const part = await fetchPart(entry.partId);
+function nextPartId(partId) {
+  const idx = state.meta.parts.findIndex((p) => p.id === partId);
+  const next = state.meta.parts[idx + 1];
+  return next ? next.id : null;
+}
 
-  const content = document.getElementById("reader-content");
-  content.innerHTML = "";
+async function appendPart(content, partId) {
+  const part = await fetchPart(partId);
   const divider = document.createElement("div");
   divider.className = "part-divider";
   divider.textContent = part.title;
   content.appendChild(divider);
 
-  part.chapters.forEach((chapter) => renderChapter(content, chapter, part.title));
+  part.chapters.forEach((chapter) => {
+    const section = renderChapterSection(chapter, partId);
+    content.appendChild(section);
+    state.scrollObserver.observe(section);
+  });
+}
+
+async function renderPartMode(chapterId) {
+  const entry = findChapter(chapterId);
+  if (!entry) return;
+
+  if (state.scrollObserver) state.scrollObserver.disconnect();
+  if (state.loadObserver) state.loadObserver.disconnect();
+
+  const content = document.getElementById("reader-content");
+  content.innerHTML = "";
+
+  // Scroll-spy: как только заголовок главы пересекает верхнюю треть экрана,
+  // считаем её текущей — обновляем закладку, оглавление и заголовок вкладки,
+  // без единой перезагрузки страницы (см. просьбу «идти просто вниз»).
+  state.scrollObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.find((e) => e.isIntersecting);
+      if (!visible) return;
+      const section = visible.target;
+      const { chapterId: cid, partId: pid } = section.dataset;
+      setBookmark(state.bookId, pid, cid);
+      const url = new URL(location.href);
+      url.searchParams.set("ch", cid);
+      history.replaceState(null, "", url);
+      const chapterTitle = section.querySelector("h2")?.textContent || "";
+      document.title = `${chapterTitle} — ${state.meta.title}`;
+      renderTOC();
+    },
+    { rootMargin: "-20% 0px -70% 0px" }
+  );
+
+  await appendPart(content, entry.partId);
+
+  const sentinel = document.createElement("div");
+  sentinel.setAttribute("aria-hidden", "true");
+  content.appendChild(sentinel);
+
+  let loadingPartId = entry.partId;
+  state.loadObserver = new IntersectionObserver(async (entries) => {
+    if (!entries[0].isIntersecting) return;
+    const next = nextPartId(loadingPartId);
+    if (!next) {
+      state.loadObserver.disconnect();
+      sentinel.remove();
+      return;
+    }
+    loadingPartId = next;
+    sentinel.remove();
+    await appendPart(content, next);
+    content.appendChild(sentinel);
+  }, { rootMargin: "600px" });
+  state.loadObserver.observe(sentinel);
 
   document.getElementById("book-title").textContent = state.meta.title;
-  document.title = `${part.title} — ${state.meta.title}`;
+  document.title = `${entry.chapterTitle} — ${state.meta.title}`;
   setBookmark(state.bookId, entry.partId, chapterId);
   renderTOC();
 }
