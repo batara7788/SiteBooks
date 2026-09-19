@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <g fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round">
+    <path d="M14 200V60Q14 14 60 14H200"/>
+    <path d="M26 200V66Q26 26 66 26H200"/>
+    <path d="M48 152C48 94 94 48 152 48"/>
+  </g>
+  <!-- лавровые листья: остроконечные, по внешней стороне ветви -->
+  <g fill="#000">
+    <g transform="translate(52 124) rotate(-76)"><path d="M0 0C6-5 16-4 21 0 16 4 6 5 0 0Z"/></g>
+    <g transform="translate(62 101) rotate(-61)"><path d="M0 0C6-5 16-4 21 0 16 4 6 5 0 0Z"/></g>
+    <g transform="translate(77 81) rotate(-46)"><path d="M0 0C6-5 16-4 21 0 16 4 6 5 0 0Z"/></g>
+    <g transform="translate(97 65) rotate(-31)"><path d="M0 0C6-5 16-4 21 0 16 4 6 5 0 0Z"/></g>
+    <g transform="translate(120 54) rotate(-16)"><path d="M0 0C6-5 16-4 21 0 16 4 6 5 0 0Z"/></g>
+
+    <g transform="translate(60 132) rotate(-104)"><path d="M0 0C5-4 13-3 17 0 13 3 5 4 0 0Z"/></g>
+    <g transform="translate(72 110) rotate(-89)"><path d="M0 0C5-4 13-3 17 0 13 3 5 4 0 0Z"/></g>
+    <g transform="translate(89 92) rotate(-74)"><path d="M0 0C5-4 13-3 17 0 13 3 5 4 0 0Z"/></g>
+    <g transform="translate(110 78) rotate(-59)"><path d="M0 0C5-4 13-3 17 0 13 3 5 4 0 0Z"/></g>
+    <g transform="translate(132 70) rotate(-44)"><path d="M0 0C5-4 13-3 17 0 13 3 5 4 0 0Z"/></g>
+
+    <circle cx="48" cy="152" r="2.6"/>
+    <circle cx="152" cy="48" r="2.6"/>
+  </g>
+</svg>

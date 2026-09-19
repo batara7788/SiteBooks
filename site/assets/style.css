@@ -19,6 +19,18 @@
   --font-sans: "Inter", -apple-system, sans-serif;
 
   --content-width: 36rem;
+
+  /* Орнамент полки. У каждой темы свой графический язык, а не один
+     рисунок в разных цветах: светлая — классическая гравюра (лавр),
+     тёмная — ар-деко (ступени), королевская — барокко (аканты и лилия).
+     --orn-tile-* — ширина плитки стороны относительно размера угла
+     (из viewBox самих SVG). */
+  --orn-corner: url("ornaments/light-corner.svg");
+  --orn-edge-h: url("ornaments/light-edge-h.svg");
+  --orn-edge-v: url("ornaments/light-edge-v.svg");
+  --orn-divider: url("ornaments/light-divider.svg");
+  --orn-tile-h: 0.3;
+  --orn-tile-v: 0.3;
 }
 
 [data-theme="dark"] {
@@ -34,6 +46,13 @@
 
   --box-bar: #d3a473;
   --box-bg: rgba(211, 164, 115, 0.08);
+
+  --orn-corner: url("ornaments/dark-corner.svg");
+  --orn-edge-h: url("ornaments/dark-edge-h.svg");
+  --orn-edge-v: url("ornaments/dark-edge-v.svg");
+  --orn-divider: url("ornaments/dark-divider.svg");
+  --orn-tile-h: 0.3;
+  --orn-tile-v: 0.3;
 }
 
 /* Королевская тема: тёмно-синий + золото. В читалке — только акцентами
@@ -50,6 +69,13 @@
 
   --box-bar: #cea847;
   --box-bg: rgba(206, 168, 71, 0.08);
+
+  --orn-corner: url("ornaments/royal-corner.svg");
+  --orn-edge-h: url("ornaments/royal-edge-h.svg");
+  --orn-edge-v: url("ornaments/royal-edge-v.svg");
+  --orn-divider: url("ornaments/royal-divider.svg");
+  --orn-tile-h: 0.4;
+  --orn-tile-v: 0.4;
 }
 
 * { box-sizing: border-box; }
@@ -98,35 +124,135 @@ button {
 }
 button:hover { background: var(--bg-elevated); }
 
-/* ---------- Полка ---------- */
-.shelf-header {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 2.5rem 1.25rem 1rem;
+/* ---------- Полка: титульный лист в рамке ---------- */
+/* Полка — «обложка» книг, поэтому здесь орнамент и рамка; в читалке
+   ничего этого нет (CLAUDE.md §6). Рамка собрана из четырёх углов и
+   четырёх тянущихся сторон: угол — один SVG, отражённый в четыре
+   стороны, стороны — повторяющаяся плитка. Красятся CSS-маской в
+   var(--accent), поэтому каждой теме достаточно подменить набор SVG. */
+body.shelf-page {
+  min-height: 100vh;
+  display: flex;
+  padding: clamp(10px, 1.8vw, 22px);
 }
-.shelf-header h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+
+.shelf-frame {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(3.4rem, 6vw, 5.5rem) clamp(1.6rem, 5vw, 4.5rem);
+  --corner: clamp(54px, 8vw, 116px);
+}
+
+.frame-corner,
+.frame-edge {
+  position: absolute;
+  pointer-events: none;
+  background-color: var(--accent);
+  opacity: 0.7;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.frame-corner {
+  width: var(--corner);
+  height: var(--corner);
+  -webkit-mask-image: var(--orn-corner);
+  mask-image: var(--orn-corner);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.frame-corner.tl { top: 0; left: 0; }
+.frame-corner.tr { top: 0; right: 0; transform: scaleX(-1); }
+.frame-corner.bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.frame-corner.br { bottom: 0; right: 0; transform: scale(-1, -1); }
+
+.frame-edge.top,
+.frame-edge.bottom {
+  left: var(--corner);
+  right: var(--corner);
+  height: var(--corner);
+  -webkit-mask-image: var(--orn-edge-h);
+  mask-image: var(--orn-edge-h);
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: calc(var(--corner) * var(--orn-tile-h)) var(--corner);
+  mask-size: calc(var(--corner) * var(--orn-tile-h)) var(--corner);
+}
+.frame-edge.top { top: 0; }
+.frame-edge.bottom { bottom: 0; transform: scaleY(-1); }
+
+.frame-edge.left,
+.frame-edge.right {
+  top: var(--corner);
+  bottom: var(--corner);
+  width: var(--corner);
+  -webkit-mask-image: var(--orn-edge-v);
+  mask-image: var(--orn-edge-v);
+  -webkit-mask-repeat: repeat-y;
+  mask-repeat: repeat-y;
+  -webkit-mask-size: var(--corner) calc(var(--corner) * var(--orn-tile-v));
+  mask-size: var(--corner) calc(var(--corner) * var(--orn-tile-v));
+}
+.frame-edge.left { left: 0; }
+.frame-edge.right { right: 0; transform: scaleX(-1); }
+
+.shelf-header {
+  text-align: center;
+  margin-bottom: clamp(1.6rem, 3.5vw, 2.8rem);
+}
+.shelf-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4.2vw, 2.9rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
 .shelf-header p { color: var(--text-dim); margin: 0; }
 
+.ornament-divider {
+  display: block;
+  margin: clamp(0.7rem, 1.6vw, 1.1rem) auto clamp(0.8rem, 1.8vw, 1.2rem);
+  width: clamp(190px, 38%, 330px);
+  height: clamp(20px, 3vw, 32px);
+  background-color: var(--accent);
+  opacity: 0.8;
+  -webkit-mask-image: var(--orn-divider);
+  mask-image: var(--orn-divider);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
 .shelf-grid {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
   display: grid;
-  gap: 1rem;
+  gap: clamp(0.9rem, 2vw, 1.25rem);
   grid-template-columns: 1fr;
 }
 @media (min-width: 640px) {
   .shelf-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 639px) {
+  .book-card { min-height: 0; }
 }
 
 /* ---------- Заметки на полке ---------- */
 /* На широком экране — колонка справа. На узком — та же панель, что и в
    читалке (.panel), выезжает по кнопке снизу справа. */
 .shelf-layout {
-  max-width: 64rem;
+  width: 100%;
+  max-width: 62rem;
   margin: 0 auto;
 }
-.shelf-menu-wrap {
+/* Селектор с body: общий .menu-wrap (position: relative) объявлен ниже по
+   файлу, и при равной специфичности побеждал бы он — кнопка уезжала в поток
+   и становилась вторым flex-элементом рядом с рамкой. */
+body.shelf-page .shelf-menu-wrap {
   position: fixed;
   bottom: 1.1rem;
   right: 1.1rem;
@@ -147,26 +273,27 @@ button:hover { background: var(--bg-elevated); }
 @media (min-width: 900px) {
   .shelf-layout {
     display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: clamp(1.5rem, 3vw, 2.6rem);
     align-items: start;
-    padding: 0 1.25rem;
   }
-  .shelf-layout .shelf-header,
-  .shelf-layout .shelf-grid {
-    padding-left: 0;
-    padding-right: 0;
-  }
-  .shelf-layout .shelf-notes {
+  /* Специфичность выше, чем у общего .panel ниже по файлу: иначе
+     position:fixed оттуда побеждает по порядку и колонка перекрывает
+     кнопку меню. */
+  body.shelf-page .shelf-layout .shelf-notes {
     position: static;
     z-index: auto;
     transform: none !important;
     width: auto;
-    border: none;
+    /* box-shadow тоже сбрасываем: у королевской темы .panel.right несёт
+       золотую полосу для выезжающей панели, в колонке она не к месту. */
     box-shadow: none;
-    padding: 2.5rem 0 0;
     background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    padding: 0.2rem 0 0 clamp(1rem, 2vw, 1.6rem);
   }
+  body.shelf-page .shelf-layout .shelf-notes h3 { color: var(--accent); }
   /* Настройки на десктопе доступны только через меню (у заметок есть
      видимая колонка, у настроек — нет), поэтому кнопку меню не прячем. */
 }
@@ -175,18 +302,35 @@ button:hover { background: var(--bg-elevated); }
   position: relative;
   display: flex;
   flex-direction: column;
-  /* С запасом под самый длинный заголовок из нынешних книг (3 строки) —
-     иначе строки грида с короткими заголовками остаются ниже. Точной
-     гарантии на все будущие книги это не даёт (нужна была бы JS-синхронизация
-     высот), но пока карточек мало, фиксированный минимум работает. */
-  min-height: 15rem;
+  /* С запасом под самый длинный заголовок из нынешних книг — иначе строки
+     грида с короткими заголовками остаются ниже. Точной гарантии на все
+     будущие книги это не даёт (нужна была бы JS-синхронизация высот), но
+     пока карточек мало, фиксированный минимум работает. */
+  min-height: 13.5rem;
+  /* На узком экране карточки идут в одну колонку — выравнивать высоту не
+     с чем, а фиксированный минимум только добавляет пустоты. */
   text-decoration: none;
   color: inherit;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.25rem;
+  border-radius: 6px;
+  padding: 1.25rem 1.25rem 1.25rem 1.6rem;
   background: var(--bg-elevated);
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
+/* «Корешок» книги — акцентная полоса у левого края карточки. */
+.book-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.9rem;
+  bottom: 0.9rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  opacity: 0.45;
+}
+.book-card:hover { transform: translateY(-2px); }
+.book-card:hover::before { opacity: 0.9; }
 .book-card h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
 .book-card p.subtitle { margin: 0 0 0.75rem; color: var(--text-dim); font-size: 0.95rem; }
 .book-card .stats { font-size: 0.8rem; color: var(--text-dim); }
@@ -438,68 +582,7 @@ figcaption { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.4em; }
   color: var(--text-dim);
 }
 
-/* ---------- Орнамент на полке (во всех темах, своим акцентным цветом) --- */
-/* Полка — это «обложка», ей можно позволить узоры. В читалке узора нет:
-   там от темы остаётся только цвет (см. §5/§6). Уголок — не заливка
-   картинкой, а CSS-маска: одна SVG-форма красится в var(--accent) темы,
-   поэтому не нужно по SVG на каждую тему. Один уголок отражается в
-   четырёх углах экрана. */
-body.shelf-page {
-  min-height: 100vh;
-}
-body.shelf-page::before,
-body.shelf-page::after,
-body.shelf-page .shelf-header::before,
-body.shelf-page .shelf-header::after {
-  content: "";
-  position: fixed;
-  width: 110px;
-  height: 110px;
-  pointer-events: none;
-  z-index: 1;
-  background-color: var(--accent);
-  opacity: 0.55;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 46V16 Q4 4 16 4 H46'/%3E%3Cpath d='M16 46V22 Q16 16 22 16 H46'/%3E%3C/g%3E%3Crect x='4' y='4' width='7' height='7' fill='%23000' transform='rotate(45 7.5 7.5)'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 46V16 Q4 4 16 4 H46'/%3E%3Cpath d='M16 46V22 Q16 16 22 16 H46'/%3E%3C/g%3E%3Crect x='4' y='4' width='7' height='7' fill='%23000' transform='rotate(45 7.5 7.5)'/%3E%3C/svg%3E");
-}
-body.shelf-page::before { top: 0; left: 0; }
-body.shelf-page::after { top: 0; right: 0; transform: scaleX(-1); }
-body.shelf-page .shelf-header::before { bottom: 0; left: 0; top: auto; transform: scaleY(-1); }
-body.shelf-page .shelf-header::after { bottom: 0; right: 0; top: auto; transform: scale(-1, -1); }
-
-body.shelf-page .shelf-header,
-body.shelf-page .shelf-grid {
-  position: relative;
-  z-index: 2;
-}
-body.shelf-page[data-theme="royal"] .shelf-header h1 {
-  color: var(--accent);
-}
+/* Подсветка карточки при наведении — общая для всех тем. */
 body.shelf-page .book-card:hover {
   border-color: var(--accent);
-}
-
-/* На телефоне уголки крупнее контента — уменьшаем и освобождаем им место. */
-@media (max-width: 480px) {
-  body.shelf-page::before,
-  body.shelf-page::after,
-  body.shelf-page .shelf-header::before,
-  body.shelf-page .shelf-header::after {
-    width: 60px;
-    height: 60px;
-  }
-  body.shelf-page .shelf-header {
-    padding-top: 3.5rem;
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
-  }
-  body.shelf-page[data-theme="royal"] .shelf-grid {
-    padding-bottom: 4rem;
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
-  }
 }

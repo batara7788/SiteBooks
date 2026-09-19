@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <g fill="none" stroke="#000" stroke-linecap="butt">
+    <path d="M12 200V12H200" stroke-width="3.6"/>
+    <path d="M28 200V28H200" stroke-width="1.4"/>
+    <path d="M44 146V44H146" stroke-width="1.4"/>
+    <path d="M60 116V60H116" stroke-width="1.4"/>
+  </g>
+  <g fill="#000">
+    <path d="M79 79l9-9 9 9-9 9z"/>
+    <!-- ступени продолжают внутренние скобки вниз и вправо -->
+    <rect x="42.6" y="154" width="3" height="30"/>
+    <rect x="58.6" y="154" width="3" height="22"/>
+    <rect x="74.6" y="154" width="3" height="14"/>
+    <rect x="154" y="42.6" width="30" height="3"/>
+    <rect x="154" y="58.6" width="22" height="3"/>
+    <rect x="154" y="74.6" width="14" height="3"/>
+  </g>
+</svg>

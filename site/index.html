@@ -9,19 +9,30 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="shelf-page">
-  <div class="shelf-layout">
-    <div class="shelf-main">
-      <header class="shelf-header">
-        <h1>Книги</h1>
-        <p>Читайте прямо здесь — ничего скачивать не нужно.</p>
-      </header>
-      <main class="shelf-grid" id="shelf-grid"></main>
-    </div>
+  <div class="shelf-frame">
+    <span class="frame-corner tl" aria-hidden="true"></span>
+    <span class="frame-corner tr" aria-hidden="true"></span>
+    <span class="frame-corner bl" aria-hidden="true"></span>
+    <span class="frame-corner br" aria-hidden="true"></span>
+    <span class="frame-edge top" aria-hidden="true"></span>
+    <span class="frame-edge bottom" aria-hidden="true"></span>
+    <span class="frame-edge left" aria-hidden="true"></span>
+    <span class="frame-edge right" aria-hidden="true"></span>
 
-    <aside class="panel right shelf-notes" id="shelf-notes-panel">
-      <h3>Заметки</h3>
-      <div id="shelf-notes-list"></div>
-    </aside>
+    <header class="shelf-header">
+      <h1>Книги</h1>
+      <span class="ornament-divider" aria-hidden="true"></span>
+      <p>Читайте прямо здесь — ничего скачивать не нужно.</p>
+    </header>
+
+    <div class="shelf-layout">
+      <main class="shelf-grid" id="shelf-grid"></main>
+
+      <aside class="panel right shelf-notes" id="shelf-notes-panel">
+        <h3>Заметки</h3>
+        <div id="shelf-notes-list"></div>
+      </aside>
+    </div>
   </div>
 
   <div class="menu-wrap shelf-menu-wrap">
