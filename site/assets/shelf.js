@@ -183,7 +183,9 @@ function saveSettings(settings) {
 
 function applySettings(settings) {
   const body = document.body;
-  body.dataset.theme = settings.theme || "light";
+  // Пока читатель не выбрал тему сам — системная (тот же порядок, что в читалке).
+  const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  body.dataset.theme = settings.theme || (systemDark ? "dark" : "light");
   body.dataset.font = settings.font || "slab";
   body.dataset.size = settings.size || "2";
   body.dataset.leading = settings.leading || "normal";

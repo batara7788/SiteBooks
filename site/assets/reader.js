@@ -72,11 +72,21 @@ function deleteNote(bookId, noteId) {
 }
 
 function loadSettings() {
+  // Тема по умолчанию — из системы, но только пока читатель не выбрал свою:
+  // сохранённый выбор всегда сильнее системной настройки.
+  const defaults = { ...DEFAULT_SETTINGS };
+  try {
+    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+      defaults.theme = "dark";
+    }
+  } catch {
+    // matchMedia недоступен — остаётся светлая
+  }
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return defaults;
   }
 }
 
@@ -127,7 +137,69 @@ async function fetchPart(partId) {
   return data;
 }
 
-function renderBlock(block) {
+// Списки во врезках набраны в Word руками: строка начинается с «• » или
+// «1. » внутри обычного абзаца. Таких абзацев в трёх книгах около 490 —
+// без сборки в настоящий список маркеры висят в тексте без отступов.
+// Маркер ищем после возможных открывающих тегов: «<b>1.</b> …» тоже бывает.
+const BULLET_RE = /^(\s*(?:<[^>]+>\s*)*)•\s+/;
+const NUMBER_RE = /^(\s*(?:<[^>]+>\s*)*)\d+[.)]\s+/;
+
+function markerKind(html) {
+  if (BULLET_RE.test(html)) return "ul";
+  if (NUMBER_RE.test(html)) return "ol";
+  return null;
+}
+
+function stripMarker(html, kind) {
+  return html.replace(kind === "ul" ? BULLET_RE : NUMBER_RE, "$1");
+}
+
+// [{tag: "p"|"ul"|"ol", items: [html]}] — подряд идущие пункты одного вида
+// склеиваются в один список.
+function groupParagraphs(htmls) {
+  const groups = [];
+  htmls.forEach((html) => {
+    const kind = markerKind(html);
+    const last = groups[groups.length - 1];
+    if (kind && last && last.tag === kind) {
+      last.items.push(stripMarker(html, kind));
+    } else if (kind) {
+      groups.push({ tag: kind, items: [stripMarker(html, kind)] });
+    } else {
+      groups.push({ tag: "p", items: [html] });
+    }
+  });
+  return groups;
+}
+
+function renderBoxContent(div, block) {
+  const groups = groupParagraphs(block.html);
+
+  groups.forEach((group, groupIndex) => {
+    if (group.tag === "p") {
+      const p = document.createElement("p");
+      p.innerHTML = group.items[0];
+      // Первая строка «Формулы» — сама формула, остальное её расшифровка:
+      // моноширинным должна быть только она, а не весь блок.
+      if (block.kind === "formula" && groupIndex === 0) p.className = "formula-main";
+      div.appendChild(p);
+      return;
+    }
+
+    // «Мини-таймлайн» — не список, а ось с точками (см. CLAUDE.md §10).
+    const isTimeline = block.kind === "timeline";
+    const list = document.createElement(isTimeline ? "ol" : group.tag);
+    if (isTimeline) list.className = "box-timeline";
+    group.items.forEach((item) => {
+      const li = document.createElement("li");
+      li.innerHTML = item;
+      list.appendChild(li);
+    });
+    div.appendChild(list);
+  });
+}
+
+function renderBlock(block, caption) {
   switch (block.type) {
     case "heading3": {
       const h = document.createElement("h3");
@@ -151,15 +223,16 @@ function renderBlock(block) {
     case "box": {
       const div = document.createElement("div");
       div.className = `box kind-${block.kind}`;
+
+      const labelText = block.label || BOX_LABELS[block.kind] || block.kind;
       const label = document.createElement("span");
-      label.className = "box-label";
-      label.textContent = block.label || BOX_LABELS[block.kind] || block.kind;
+      // Подпись «▢ СХЕМА 1.1: лента порядков величин…» — это целое
+      // предложение, а не ярлык: капсом в 0.72rem оно нечитаемо.
+      label.className = labelText.length > 40 ? "box-label box-label-long" : "box-label";
+      label.textContent = labelText;
       div.appendChild(label);
-      block.html.forEach((paraHtml) => {
-        const p = document.createElement("p");
-        p.innerHTML = paraHtml;
-        div.appendChild(p);
-      });
+
+      renderBoxContent(div, block);
       return div;
     }
     case "table": {
@@ -182,12 +255,13 @@ function renderBlock(block) {
       const figure = document.createElement("figure");
       const img = document.createElement("img");
       img.src = `data/${state.bookId}/${block.src}`;
-      img.alt = block.caption || "";
+      img.alt = block.caption || caption || "";
       img.loading = "lazy";
       figure.appendChild(img);
-      if (block.caption) {
+      const capText = block.caption || caption;
+      if (capText) {
         const cap = document.createElement("figcaption");
-        cap.textContent = block.caption;
+        cap.textContent = capText;
         figure.appendChild(cap);
       }
       return figure;
@@ -197,11 +271,37 @@ function renderBlock(block) {
   }
 }
 
+// Подпись к иллюстрации в Word — отдельный абзац целиком курсивом сразу
+// после картинки. Своего поля в данных у неё нет, поэтому узнаём её здесь
+// и вклеиваем в <figure>, иначе она читается как обычный текст главы.
+const CAPTION_RE = /^\s*<i>([\s\S]+)<\/i>\s*$/;
+
+function captionFor(blocks, index) {
+  const next = blocks[index + 1];
+  if (!next || next.type !== "p") return null;
+  const m = CAPTION_RE.exec(next.html);
+  if (!m || m[1].includes("<i>")) return null;
+  return m[1].replace(/<[^>]+>/g, "").trim();
+}
+
 function renderChapter(container, chapter, partTitle) {
   const h2 = document.createElement("h2");
   h2.textContent = chapter.title;
   container.appendChild(h2);
-  chapter.blocks.forEach((block) => container.appendChild(renderBlock(block)));
+
+  let skipNext = false;
+  chapter.blocks.forEach((block, i) => {
+    if (skipNext) {
+      skipNext = false;
+      return;
+    }
+    let caption = null;
+    if (block.type === "image") {
+      caption = captionFor(chapter.blocks, i);
+      if (caption) skipNext = true;
+    }
+    container.appendChild(renderBlock(block, caption));
+  });
 }
 
 // Каждая глава в режиме "часть целиком" — отдельная <section> с data-атрибутами,
@@ -467,6 +567,10 @@ async function renderCurrentChapter() {
   }
 }
 
+// Открыто ли оглавление наведением: от этого зависит, закрывать ли его
+// при отводе курсора (открытое из меню так закрываться не должно).
+let tocOpenedByHover = false;
+
 function setupPanels() {
   const tocPanel = document.getElementById("toc-panel");
   const notesPanel = document.getElementById("notes-panel");
@@ -475,6 +579,7 @@ function setupPanels() {
   const menuDropdown = document.getElementById("menu-dropdown");
 
   function closeAll() {
+    tocOpenedByHover = false;
     tocPanel.classList.remove("open");
     notesPanel.classList.remove("open");
     settingsPanel.classList.remove("open");
@@ -490,9 +595,36 @@ function setupPanels() {
 
   document.getElementById("open-toc").addEventListener("click", () => {
     menuDropdown.classList.remove("open");
+    tocOpenedByHover = false;
     tocPanel.classList.add("open");
     overlay.classList.add("open");
   });
+
+  // Оглавление по наведению на левый край экрана. Только там, где есть
+  // настоящая мышь: на телефоне hover срабатывает от случайного касания
+  // края, поэтому там остаётся прежний способ — через меню.
+  const hotzone = document.getElementById("toc-hotzone");
+  const finePointer = window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
+  if (hotzone && finePointer) {
+    hotzone.addEventListener("mouseenter", () => {
+      // Без затемнения: оно бы гасило текст при каждом заходе мыши влево.
+      tocOpenedByHover = true;
+      tocPanel.classList.add("open");
+    });
+    // Закрываем по расстоянию курсора, а не по уходу с панели: если мазнуть
+    // по краю и сразу увести мышь вправо мимо панели, mouseleave на ней не
+    // случится и оглавление осталось бы висеть поверх текста.
+    document.addEventListener(
+      "mousemove",
+      (e) => {
+        if (!tocOpenedByHover) return;
+        if (e.clientX <= tocPanel.offsetWidth + 24) return;
+        tocOpenedByHover = false;
+        tocPanel.classList.remove("open");
+      },
+      { passive: true }
+    );
+  }
   document.getElementById("open-notes").addEventListener("click", () => {
     menuDropdown.classList.remove("open");
     notesPanel.classList.add("open");

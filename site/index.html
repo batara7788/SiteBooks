@@ -103,7 +103,9 @@
     try {
       const raw = localStorage.getItem("reader-settings");
       const s = raw ? JSON.parse(raw) : {};
-      document.body.dataset.theme = s.theme || "light";
+      // Пока читатель не выбрал тему сам — берём системную.
+      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.body.dataset.theme = s.theme || (systemDark ? "dark" : "light");
       document.body.dataset.font = s.font || "slab";
       document.body.dataset.size = s.size || "2";
       document.body.dataset.leading = s.leading || "normal";
