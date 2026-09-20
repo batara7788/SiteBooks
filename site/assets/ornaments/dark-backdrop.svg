@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420">
+  <path d="M0 300 90 232 150 266 250 120 330 214 420 176 520 62 600 150 660 120 760 210 850 162 960 240 1060 196 1140 250 1200 226 L1200 420 L0 420 Z" fill="#000" fill-opacity="0.34"/>
+  <path d="M0 336 80 306 180 216 262 272 350 202 430 268 540 168 640 252 720 214 820 288 900 246 1010 302 1100 266 1200 300 L1200 420 L0 420 Z" fill="#000" fill-opacity="0.58"/>
+  <path d="M0 368 120 344 220 302 320 348 420 312 520 352 620 316 700 358 810 328 920 362 1020 338 1120 362 1200 348 L1200 420 L0 420 Z" fill="#000" fill-opacity="0.9"/>
+  <circle cx="120" cy="70" r="3.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="300" cy="40" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="455" cy="96" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="700" cy="52" r="3.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="880" cy="88" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="1035" cy="58" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="1150" cy="110" r="3.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="215" cy="132" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="615" cy="30" r="2.6" fill="#000" fill-opacity="0.5"/>
+  <circle cx="960" cy="128" r="3.6" fill="#000" fill-opacity="0.5"/>
+</svg>

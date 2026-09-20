@@ -5,6 +5,9 @@
 :root {
   --bg: #faf7f0;
   --bg-elevated: #f2ede1;
+  /* Карточки чуть прозрачные — фоновый рисунок темы виден сквозь них
+     и не режется на куски. */
+  --card-bg: rgba(242, 237, 225, 0.76);
   --text: #262220;
   --text-dim: #6b6259;
   --border: #e3dccb;
@@ -31,11 +34,18 @@
   --orn-divider: url("ornaments/light-divider.svg");
   --orn-tile-h: 0.3;
   --orn-tile-v: 0.3;
+
+  /* Фоновый рисунок полки: светлая — луг из линейных цветов по низу. */
+  --backdrop: url("ornaments/light-backdrop.svg");
+  --backdrop-size: 100% auto;
+  --backdrop-position: center bottom;
+  --backdrop-opacity: 0.17;
 }
 
 [data-theme="dark"] {
   --bg: #1b1815;
   --bg-elevated: #24201b;
+  --card-bg: rgba(36, 32, 27, 0.76);
   --text: #ece6da;
   /* Тёмная тема добавляет тексту вес: светлый текст на тёмном кажется
      тоньше, чем он есть, поэтому шрифт здесь чуть жирнее (см. body ниже). */
@@ -53,6 +63,12 @@
   --orn-divider: url("ornaments/dark-divider.svg");
   --orn-tile-h: 0.3;
   --orn-tile-v: 0.3;
+
+  /* Тёмная — горная гряда по нижнему краю, слоями вглубь. */
+  --backdrop: url("ornaments/dark-backdrop.svg");
+  --backdrop-size: 118% auto;
+  --backdrop-position: center bottom;
+  --backdrop-opacity: 0.13;
 }
 
 /* Королевская тема: тёмно-синий + золото. В читалке — только акцентами
@@ -61,6 +77,7 @@
 [data-theme="royal"] {
   --bg: #0b1220;
   --bg-elevated: #121b30;
+  --card-bg: rgba(18, 27, 48, 0.76);
   --text: #e8e2cf;
   --text-dim: #93a0bd;
   --border: #2a3454;
@@ -76,6 +93,12 @@
   --orn-divider: url("ornaments/royal-divider.svg");
   --orn-tile-h: 0.4;
   --orn-tile-v: 0.4;
+
+  /* Королевская — геометрическая звезда-розетка водяным знаком по центру. */
+  --backdrop: url("ornaments/royal-backdrop.svg");
+  --backdrop-size: min(88vmin, 900px) auto;
+  --backdrop-position: center center;
+  --backdrop-opacity: 0.1;
 }
 
 * { box-sizing: border-box; }
@@ -134,6 +157,28 @@ body.shelf-page {
   min-height: 100vh;
   display: flex;
   padding: clamp(10px, 1.8vw, 22px);
+}
+
+/* Фоновый рисунок темы: горы / цветы / звёздная розетка. Не самостоятельный
+   объект, а глубина за содержимым — поэтому низкая непрозрачность, position:
+   fixed (не уезжает при прокрутке) и z-index: -1, чтобы лежать над фоном
+   страницы, но под всем остальным. Как и рамка, это маска, окрашенная
+   в --accent темы. Только на полке: в читалке фон чистый (CLAUDE.md §6). */
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--accent);
+  opacity: var(--backdrop-opacity);
+  -webkit-mask-image: var(--backdrop);
+  mask-image: var(--backdrop);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--backdrop-size);
+  mask-size: var(--backdrop-size);
+  -webkit-mask-position: var(--backdrop-position);
+  mask-position: var(--backdrop-position);
 }
 
 .shelf-frame {
@@ -239,6 +284,12 @@ body.shelf-page {
 }
 @media (max-width: 639px) {
   .book-card { min-height: 0; }
+
+  /* На узком экране рисунок, вписанный по ширине, становится полоской в
+     пару сантиметров — увеличиваем, пусть уходит за края. */
+  body.shelf-page { --backdrop-size: 150% auto; }
+  body.shelf-page[data-theme="dark"] { --backdrop-size: 200% auto; }
+  body.shelf-page[data-theme="royal"] { --backdrop-size: 135vmin auto; }
 }
 
 /* ---------- Заметки на полке ---------- */
@@ -314,7 +365,7 @@ body.shelf-page .shelf-menu-wrap {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 1.25rem 1.25rem 1.25rem 1.6rem;
-  background: var(--bg-elevated);
+  background: var(--card-bg);
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 /* «Корешок» книги — акцентная полоса у левого края карточки. */
